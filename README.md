@@ -1,115 +1,175 @@
-# Space Invaders Recomp
+# Space Invaders (USA) — SNES Recompilation
 
-A native recompilation of **Space Invaders** (USA), built on
-[snesrecomp](https://github.com/RetroPortingToolKit/snesrecomp).
+A native desktop recompilation of **Space Invaders** for the Super Nintendo Entertainment System, based on the USA release.
 
-_Add a short description here._
+This repository contains the game-specific recompilation project and build configuration. The shared SNES recompilation framework and desktop UI are included as Git submodules.
 
+## Project status
 
+The native Windows application has been built and tested.
 
-> **You must legally own a copy of the game.** No ROM data is distributed with
-> this project, in the repository or in any release. The recompiled C is
-> generated locally from your own copy and is never committed.
+The following have been confirmed working:
 
-## Status
+- Graphics and rendering
+- Audio
+- Controller input
+- Gameplay
 
-Scaffolded on 2026-11-21 — **not yet a working port.** The layout, build,
-regeneration pipeline, CI, and packaging are wired up; the game does not run
-until the host work in `src/game_rtl.c` is done. See
-[Porting from here](#porting-from-here).
+The original SNES game includes a two-player competitive versus mode. This project currently declares one player in its desktop host configuration. Two-player behavior and the original versus mode have not yet been verified in this recompilation.
 
-## ROM identity
+## ROM requirements
 
-| | |
+**The original game ROM is not included in this repository or its releases.** You must supply your own compatible ROM.
+
+The project has been configured for the following USA ROM image:
+
+| Property | Expected value |
 |---|---|
+| Game | Space Invaders (USA) |
 | File | `Space Invaders (USA).sfc` |
-| Publisher | — |
-| Developer | — |
-| Year | — |
-| Mapping | lorom |
-| Region | USA (North America) |
-| Coprocessor | none |
-| CRC32 | `caf035f5` |
+| Size | 262,144 bytes (256 KiB) |
+| Mapping | LoROM |
+| Region | USA / NTSC |
+| CRC-32 | `caf035f5` |
+| MD5 | `925b7c04455633503842e524940a3676` |
+| SHA-1 | `125a5a045ab6cb60728c8aded449c7b6a8144035` |
 | SHA-256 | `dc5353ddc350816619230f25f8c51bddabf7438e6dfba21662eb1c4794856735` |
 
-`tools/regen.sh` refuses to run against anything else, so a mismatched
-revision fails immediately instead of producing subtly wrong output.
+The CRC-32 and SHA-256 hashes are used for ROM verification. The other hashes are provided for identification purposes.
 
-## Build
+A 512-byte SMC copier header, if present, is excluded from verification.
 
-```sh
+The ROM is used locally to generate the game-specific source code. It should not be committed, uploaded, or bundled with this project. Local ROM configuration and generated files are excluded from version control.
+
+## Building on Windows
+
+### Requirements
+
+The tested build environment uses:
+
+- Windows
+- Visual Studio 2026 with the C++ desktop development tools
+- CMake
+- Git
+- Git Bash
+- Python (for the regeneration tools)
+
+You will also need a ROM matching the identity described above.
+
+### 1. Clone the repository
+
+Clone the repository with its submodules:
+
+```powershell
+git clone --recurse-submodules <repository-url>
+cd SpaceInvaders
+```
+
+If you already cloned the repository without its submodules, initialize them:
+
+```powershell
 git submodule update --init --recursive
-bash tools/regen.sh --rom /path/to/Space Invaders (USA).sfc
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
 ```
 
-The ROM does not have to live in the repository — keeping it on your own
-drive is the better habit, and `SNESRECOMP_ROM` sets the path once for a
-shell. Without either, `tools/regen.sh` finds `Space Invaders (USA).sfc` at the repo root,
-then the path the setup wizard recorded in `rom.cfg`; `.gitignore` blocks
-both from ever being committed.
+### 2. Generate the game-specific source
 
-`tools/regen.sh` verifies the ROM, generates `src/gen/*.c`, and re-syncs
-`recomp/funcs.h`. Re-run it whenever you change anything under `recomp/`.
+Provide the path to your ROM:
 
-## Run
-
-```sh
-./build/SpaceInvadersSNESRecomp                     # launcher picks the ROM
-./build/SpaceInvadersSNESRecomp /path/to/Space Invaders (USA).sfc # or name it and skip the launcher
+```powershell
+bash tools/regen.sh --rom "C:/path/to/Space Invaders (USA).sfc"
 ```
 
-With no ROM on the command line the build opens the recomp-ui launcher: a ROM
-picker with a verification badge, plus display / audio / input settings. Your
-choice is cached in `rom.cfg` beside the executable, so the next launch opens
-on it and "Skip launcher on boot" makes it immediate. If the launcher is not
-built in (`--no-recomp-ui`), the host falls back to a native file picker.
+The regeneration script verifies the ROM against the expected CRC-32 and SHA-256 hashes before generating source code.
 
-Either way the ROM is checked against the digests above before anything boots
-— a dump that could not have produced this build is refused at the door rather
-than mis-executing ten frames in.
+You can alternatively set the `SNESRECOMP_ROM` environment variable in PowerShell:
 
-## Layout
+```powershell
+$env:SNESRECOMP_ROM = "C:\Games\Space Invaders (USA).sfc"
+bash tools/regen.sh
+```
 
-| Path | What lives there |
+If neither `--rom` nor `SNESRECOMP_ROM` is supplied, the script also checks for recognized ROM filenames in the repository root and then the path recorded in the project's `rom.cfg`.
+
+The `--no-verify` option bypasses ROM verification. It is not recommended for normal builds.
+
+Generation produces `src/gen/*.c` and synchronizes `recomp/funcs.h`. Re-run the regeneration script after changing recompilation configuration under `recomp/`.
+
+### 3. Configure the Windows build
+
+The tested CMake generator is Visual Studio 2026:
+
+```powershell
+cmake -S . -B build -G "Visual Studio 18 2026" -A x64
+```
+
+If you use a different Visual Studio version, substitute its installed CMake generator name.
+
+### 4. Build
+
+Build the Release configuration:
+
+```powershell
+cmake --build build --config Release --parallel
+```
+
+### 5. Run
+
+The executable is produced at:
+
+```text
+build/Release/SpaceInvadersSNESRecomp.exe
+```
+
+Launch it with:
+
+```powershell
+.\build\Release\SpaceInvadersSNESRecomp.exe
+```
+
+## Running the game
+
+When launched without a ROM argument, the application opens the desktop ROM-selection launcher. Select your ROM there.
+
+You can also provide a ROM path directly:
+
+```powershell
+.\build\Release\SpaceInvadersSNESRecomp.exe "C:\Games\Space Invaders (USA).sfc"
+```
+
+The desktop host supports these command-line options:
+
+| Option | Behavior |
 |---|---|
-| `recomp/` | Analysis input: `bank*.cfg`, `symbols.toml`, generated `funcs.h` |
-| `rom_identity.txt` | ROM digests — read by the build, `tools/regen.sh` and CI |
-| `src/` | Host code you own: `main.c`, `game_rtl.c` |
-| `src/gen/` | Generated C. Never committed — regenerate locally |
-| `snesrecomp/` | Framework submodule (owns `lib/recomp-net`, `lib/retcomm-rbengine`) |
-| `tools/` | `regen.sh` — the ROM → C pipeline |
-| `scripts/` | `package_release.sh` — player-facing zip |
-| `framework_pins.txt` | Exact framework commits this project was scaffolded against |
+| `--no-launcher` | Skip the launcher and boot directly into the game using the available ROM. |
+| `--launcher` | Force the launcher to open, even when a ROM path is supplied. |
 
-## Porting from here
+The launcher remembers the selected ROM in `rom.cfg` beside the executable.
 
-The scaffold stops where the game-specific work starts. In rough order:
+The launcher's **Skip launcher on boot** setting allows subsequent launches to go directly into the game using the cached ROM. You can force the launcher to appear again with `--launcher`.
 
-1. **Make it boot.** `src/game_rtl.c` holds the frame driver. It starts on
-   the framework's beam-aligned driver (`snesrecomp/runner/src/beam_frame_driver.h`):
-   one frame per PPU field, interrupts taken where the beam latches them,
-   the field rasterized from the raster journal. A title whose main loop it
-   does not fit replaces those calls with its own driver.
-2. **Name things.** Add entries to `recomp/symbols.toml` as you identify
-   routines, then re-run `tools/regen.sh`. Set `emit = true` to promote one
-   into ahead-of-time analysis; leave it false to keep it interpreted.
-   Regen synchronizes the marked blocks in each bank cfg, creating missing
-   configs. Only proven variants become AOT code. See `recomp/README.md`.
-3. **Resolve dispatch misses.** After every run, deal with unresolved
-   indirect targets before anything else — they are the reason a port
-   diverges, and they are cheap to fix early.
-4. **Never synthesise a result** to get past uncovered code, and never edit
-   `src/gen/` by hand. Fix the config or the framework and regenerate.
+The desktop host verifies the selected ROM against the expected game identity before running it.
 
-## Multiplayer
+## Repository layout
 
-Single player.
+| Path | Description |
+|---|---|
+| `src/` | Game-specific host and project source |
+| `src/gen/` | Generated C source; regenerated locally |
+| `recomp/` | Game-specific recompilation configuration |
+| `snesrecomp/` | Shared SNES recompilation framework (Git submodule) |
+| `recomp-ui/` | Desktop UI components (Git submodule) |
+| `tools/` | Regeneration and development scripts |
+| `rom_identity.txt` | Expected ROM identity and technical properties |
+| `LICENSE` | License for this project's own source |
 
-## License
+Generated source, local ROM configuration, build output, save data, and user-specific settings are not intended to be committed.
 
-This project's own source is under the license in `LICENSE`. The framework
-carries its own terms — see `snesrecomp/LICENSE` and
-`snesrecomp/THIRD_PARTY_ATTRIBUTION.md`. Neither covers the game data, which
-is not distributed here.
+## Licensing and third-party notices
+
+This project's own source is distributed under the **PolyForm Noncommercial License 1.0.0**. See [`LICENSE`](LICENSE) for the complete terms.
+
+The shared framework and desktop UI are included as Git submodules and have their own licensing terms. Review the license files in those submodules before using or redistributing the project.
+
+The framework's third-party attribution document is available at [`snesrecomp/THIRD_PARTY_ATTRIBUTION.md`](snesrecomp/THIRD_PARTY_ATTRIBUTION.md) after initializing the submodule. Retain applicable third-party notices when distributing a package containing the runner.
+
+The project license does not grant rights to the original Space Invaders game, its ROM, or other third-party intellectual property. No game ROM is provided here. Users are responsible for obtaining and using game data in accordance with applicable law and the rights of the relevant owners.
